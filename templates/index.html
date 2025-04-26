@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>SRM Chatbot</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <button id="theme-toggle" aria-label="Toggle theme">🌙</button>
+
+  <header>
+    <h1 class="title">SRM Chatbot</h1>
+  </header>
+
+  <main>
+    <section id="chatbox">
+      <div id="chat-log" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div id="input-section" role="form" aria-label="Chat input section">
+      <input 
+        type="text" 
+        id="user-input" 
+        placeholder="Type your message..." 
+        aria-label="User message input"
+        autocomplete="off" />
+      <button onclick="sendMessage()" aria-label="Send message">Send</button>
+      <button id="voice-btn" title="Start voice input 🎤" aria-label="Voice input">🎤</button>
+      <span id="listening-indicator" style="display:none;">🎙️ Listening...</span>
+    </div>
+  </footer>
+
+  <script>
+    const chatLog = document.getElementById("chat-log");
+    const userInput = document.getElementById("user-input");
+    const voiceBtn = document.getElementById("voice-btn");
+    const indicator = document.getElementById("listening-indicator");
+
+    function appendMessage(sender, message, timestamp) {
+      const msg = document.createElement("div");
+      msg.classList.add("message", sender);
+      const id = `text-${Date.now()}`;
+
+      msg.innerHTML = `
+        <div class="avatar">${sender === 'user' ? '👤' : '🤖'}</div>
+        <div class="bubble">
+          <div class="text" id="${id}"></div>
+          <div class="timestamp">${timestamp}</div>
+        </div>
+      `;
+
+      chatLog.appendChild(msg);
+      chatLog.scrollTop = chatLog.scrollHeight;
+
+      if (sender === 'user') {
+        typeWriterEffect(id, message);
+      } else {
+        document.getElementById(id).innerHTML = message;
+      }
+    }
+
+    function typeWriterEffect(id, text, i = 0) {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (i < text.length) {
+        el.innerHTML += text.charAt(i);
+        setTimeout(() => typeWriterEffect(id, text, i + 1), 20);
+      }
+    }
+
+    async function sendMessage() {
+      const message = userInput.value.trim();
+      if (message === "") return;
+      const timestamp = new Date().toLocaleTimeString();
+      appendMessage("user", message, timestamp);
+      userInput.value = "";
+
+      const loading = document.createElement("div");
+      loading.className = "loading-shimmer";
+      chatLog.appendChild(loading);
+      chatLog.scrollTop = chatLog.scrollHeight;
+
+      const response = await fetch("/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+
+      chatLog.removeChild(loading);
+      const data = await response.json();
+      const replyTimestamp = new Date().toLocaleTimeString();
+      appendMessage("bot", data.response, replyTimestamp);
+    }
+
+    // Voice input
+    voiceBtn.onclick = () => {
+      const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+      recognition.lang = 'en-US';
+      recognition.start();
+
+      voiceBtn.classList.add("listening");
+      indicator.style.display = "inline";
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        userInput.value = transcript;
+      };
+
+      recognition.onend = () => {
+        voiceBtn.classList.remove("listening");
+        indicator.style.display = "none";
+      };
+    };
+
+    // Theme toggle
+    const toggle = document.getElementById("theme-toggle");
+    toggle.onclick = () => {
+      document.body.classList.toggle("dark");
+      toggle.textContent = document.body.classList.contains("dark") ? "☀️" : "🌙";
+    };
+  </script>
+</body>
+</html>
