@@ -1,5 +1,6 @@
 SRM Campus Chatbot 🎓🤖
 A lightweight chatbot powered by Flask, OpenRouter API (Mistral model), and SQLite to provide helpful information about SRM Institute of Science and Technology — including courses, admissions, fee structure, campus life, and more!
+
 🚀 Features
 📚 Answers queries about SRM University.
 
